@@ -21,26 +21,26 @@ This is a moderately-janky solution for getting a Now Playing overlay to appear 
 * Requires Python to be installed
 * Fiddly setup that involves editing files and entering a bunch of hard paths.
 
-Despite these problems, I could not find any better solution. Local media players are virtually a dead product; the only alternative was VLC, whose scripting interface is so godawful that it can't even deliver the bare minimum requirements for this.
+Despite these problems, I could not find any better solution. Local media players are virtually a dead product; the only real alternative with any uptake was VLC, whose scripting interface is so godawful that it can't even deliver the bare minimum requirements for this.
 
 # Installation
 
-* Download the package from the Releases section
-* Extract it to a folder somewhere on your PC.
-  * We will assume you used `C:\Code\FB2KNowPlayingOverlay`
-* Install the foobar2000 plugin [Now Playing 2](https://github.com/foxx1337/foo_nowplaying2)
-* Make sure you have Python installed. The latest version of python3 should be fine.
-  * I recommend running the installer as Administrator and telling it to install systemwide rather than for just your user.
+1. Download the package from the Releases section
+2. Extract it to a folder somewhere on your PC.
+	* We will assume you used `C:\Code\FB2KNowPlayingOverlay`
+3. Install the foobar2000 plugin [Now Playing 2](https://github.com/foxx1337/foo_nowplaying2)
+4. Make sure you have Python installed. The latest version of python3 should be fine.
+	* I recommend running the installer as Administrator and telling it to install systemwide rather than for just your user.
 
 ## Configuring foobar
 
-* Open foobar2000 and select **Preferences** from the **File** menu
-* Locate **Now Playing 2** under the **Tools** section
-* On the **Now Playing** tab, set the **File** value
-  * The file is "nowplaying.json", in the folder where you extracted this package.
-  * Ex: `C:\Code\FB2KNowPlayingOverlay\nowplaying.json`
-* Under the **Format** section, check all the boxes next to **Events**
-* Now, paste the following into the text field below those checkboxes:
+1. Open foobar2000 and select **Preferences** from the **File** menu
+2. Locate **Now Playing 2** under the **Tools** section
+3. On the **Now Playing** tab, set the **File** value
+	* The file is "nowplaying.json", in the folder where you extracted this package.
+	* Ex: `C:\Code\FB2KNowPlayingOverlay\nowplaying.json`
+4. Under the **Format** section, check all the boxes next to **Events**
+5. Now, paste the following into the text field below those checkboxes:
 
 ```
 {
@@ -59,27 +59,34 @@ Despite these problems, I could not find any better solution. Local media player
 }
 ```
 
-* Click OK
-* Start playing a song (make sure it has valid artist/track tags!)
-* Check in the project directory and make sure `nowplaying.json` has appeared.
-* If you want album art, follow the next section; otherwise, jump to **Configuring Overlay**
+6. Click OK
+7. Start playing a song (make sure it has valid artist/track tags!)
+8. Check in the project directory and make sure `nowplaying.json` has appeared.
+9. If you want album art, follow the next section; otherwise, jump to **Configuring Overlay**
 
 ### Enabling album art
 
-Album art is an egregious hack, so please be aware: **It only works if the art is stored as a file called folder.jpg in the same directory as the song you're playing.** While foobar recognizes other names for album art, there is absolutely no way to determine which file it picked. So if you want this to work reliably, you'll have to go through all your music folders and make sure the album cover has that exact filename.
+Album art has a couple caveats:
 
-* Open the **Now Playing 2** config in foobar again.
-* Go to the **Log** tab
-* Pick a nonsense filename somewhere, it doesn't matter where.
-  * If you don't do this, the plugin won't fill in the necessary variable.
-* In the **Format** field, enter: `$directory_path(%path%)`
-* Go to the **Run** tab
-* Ensure **On New Track** is selected.
-* In the **Launch** field, enter: `C:\Code\FB2KNowPlayingOverlay\albumart.bat "$np2_log"`
+* The art must exist in the same folder as the track you're playing
+* It must be named **front.jpg**, **cover.jpg** or **folder.jpg**
+  * If multiple exist, it'll use them in that order.
+* It is not enabled by default; check the **Customizing the overlay** section for how to enable it.
+
+With that said, here are the steps.
+
+1. Open the **Now Playing 2** config in foobar again.
+2. Go to the **Log** tab
+3. Pick a nonsense filename somewhere, it doesn't matter where.
+	- If you don't do this, the plugin won't fill in the necessary variable.
+5. In the **Format** field, enter: `$directory_path(%path%)`
+6. Go to the **Run** tab
+7. Ensure **On New Track** is selected.
+8. In the **Launch** field, enter: `C:\Code\FB2KNowPlayingOverlay\albumart.bat "$np2_log"`
   * As usual, change the folder name if you didn't extract to that exact location.
-* Click OK
-* Play a new song (one which you know has album art!)
-* Look in the project folder and see if an "albumart.jpg" has appeared.
+8. Click OK
+9. Play a new song (one which you know has album art!)
+10. Look in the project folder and see if an "albumart.jpg" has appeared.
   * If there's no such file _at all_, then the batch file failed to execute. Check the path you entered in the Launch command.
   * If the file is there, open it. If it's a generic CD icon, then the source file was not found; check that "folder.jpg" exists in the same folder as the song you played.
   * If the file is there and has the correct artwork, you're set to jet.
@@ -88,19 +95,19 @@ Album art is an egregious hack, so please be aware: **It only works if the art i
 
 First, let's start the server and make sure it works.
 
-* Open the folder where you extracted this project
-* Launch `runserver.bat`
-* A window should appear saying that a server is now running
-  * A note of caution: This web server shares everything in the folder it's run from. Make ABSOLUTELY certain you do not put anything private in the same folder!
-* Open your web browser and go to `http://localhost:8005/nowplaying.html`
-* You should see the Now Playing overlay.
-* Play a song in foobar
-* The overlay should smoothly update with the new track info.
-* Now, open OBS Studio
-* Create a **Browser Source**
-* Point it to the same URL: `http://localhost:8005/nowplaying.html`
-* The Now Playing box should appear on your stream.
-* You're ready to go!
+1. Open the folder where you extracted this project
+2. Launch `runserver.bat`
+3. A window should appear saying that a server is now running
+	* A note of caution: This web server shares everything in the folder it's run from. Make ABSOLUTELY certain you do not put anything private in the same folder!
+4. Open your web browser and go to `http://localhost:8005/nowplaying.html`
+5. You should see the Now Playing overlay.
+6. Play a song in foobar
+7. The overlay should smoothly update with the new track info.
+8. Now, open OBS Studio
+9. Create a **Browser Source**
+10. Point it to the same URL: `http://localhost:8005/nowplaying.html`
+11. The Now Playing box should appear on your stream.
+12. You're ready to go!
 
 # Customizing the overlay
 
@@ -109,8 +116,11 @@ There are several built-in adjustments you can make by modifying the URL in the 
 `http://localhost:8005/nowplaying.html?art=true&fade=true&width=500`
 
 **Album art display:** This is **off** by default. Add `art=true` to enable it.
+
 **Fade out:** This is **off** by default. Add `fade=true` to enable it.
+
 **Fade out delay:** This is 10 seconds by default. Add `fadetime=20` to change it to i.e. 20 seconds.
+
 **Display width:** The UI is about 350 pixels wide by default. Add `width=500` to make it i.e. 500 pixels.
 
 # Credits
