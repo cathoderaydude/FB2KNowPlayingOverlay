@@ -187,8 +187,6 @@ $RECYCLE.BIN/
 ## Python
 #############
 
-*.py[co]
-
 # Packages
 *.egg
 *.egg-info
@@ -221,3 +219,4 @@ nextstep/
 nowplaying.json
 albumart.jpg
 albumart.txt
+asdasd
