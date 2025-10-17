@@ -102,13 +102,13 @@ To set up album art retrieval:
 6. Go to the **Run** tab
 7. Ensure **On New Track** is selected.
 8. In the **Launch** field, enter: `C:\Code\FB2KNowPlayingOverlay\albumart.bat "$np2_log"` [like this](doc-images/np2-step3.png).
-  * As usual, change the folder name if you didn't extract to that exact location.
+	* As usual, change the folder name if you didn't extract to that exact location.
 8. Click OK
 9. Play a new song (one which you know has album art!)
 10. Look in the project folder and see if an "albumart.jpg" has appeared.
-  * If there's no such file _at all_, then the script failed to execute. Check the path you entered in the Launch command.
-  * If the file is there, but it's a generic CD icon, then the source file was not found; check that the album art is present in the original folder.
-  * If the file is there and has the correct artwork, you're set to jet.
+	* If there's no such file _at all_, then the script failed to execute. Check the path you entered in the Launch command.
+	* If the file is there, but it's a generic CD icon, then the source file was not found; check that the album art is present in the original folder.
+	* If the file is there and has the correct artwork, you're set to jet.
 
 ## Setting up the overlay
 
