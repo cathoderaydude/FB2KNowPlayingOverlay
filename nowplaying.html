@@ -10,7 +10,7 @@
 		// Collect flags from URL
 		params = new URLSearchParams(document.location.search);
 		// Flags default to false, and become true if you pass them in the URL with any value.
-		// Example: nowplaying.html?noart=yep&fade=sure&fadetime=5
+		// Example: nowplaying.html?noart=yep&fade=sure
 		// The above will enable art and fadeout, but would do the same thing even if you put "nope" in the value.
 
 		var artFlag = params.get("noart") != null ? false : true;
@@ -21,10 +21,14 @@
 			: 10;
 			
 		var maxWidth = params.get("width") != null ? 
-			parseInt(params.get("width")) != NaN ? parseInt(params.get("width")) : 350
-		: 350;
+			parseInt(params.get("width")) != NaN ? parseInt(params.get("width")) : 500
+		: 500;
 		
 		var useFolderName = params.get("foldername") != null ? true : false;
+		var useFileName = params.get("filename") != null ? true : false;
+		var lastPlayed = params.get("lastplayed") != null ?
+			parseInt(params.get("lastplayed")) != NaN ? parseInt(params.get("lastplayed")) : 350
+		: 0;
 		// ======================================
 		
 		
@@ -65,209 +69,271 @@
 						}
 					}
 				}
-				
-				// Check if board needs to fade out
-				if (fadeStatus > 0 && fadeFlag) {
-					fadeStatus--;
-				} else if (fadeStatus == 0 && fadeFlag) {
-					TweenMax.killTweensOf($('#board'));
-					TweenMax.to($('#board'), 1, {opacity: 0});
-					fadeStatus = -1;
-				}
-				
-				// Update progressbar width in case it's changed due to album art loading weirdness or something.
-				progressLength = $("#progresswrapper").width();
 			}, 1000);
+			
+			// Set board width
+			$("#board").css("width", maxWidth);
 			
 			// Show/hide the album art field.
 			if (artFlag == true) {
-				$("#art").removeClass("hidden");
-				$("#metadata").css("width", maxWidth);
-			} else {
-				$("#metadata").css("width", maxWidth - 128);
+				$("#meta-art").removeClass("hidden");
+			}
+			
+			// Show the board if fade is disabled
+			if (fadeFlag != true) {
+				$("#board").css("opacity", 1);
+			}
+			
+			// Show the recently-played list if enabled
+			if (lastPlayed > 0) {
+				$("#history").removeClass("hidden");
 			}
 		}
 		
-		// Last known data for comparison on each loop
-		lastFieldData = {
-			"#artist" : "",
-			"#album" : "",
-			"#title" : ""
-		}
+		// Data from last update
+		var lastPlaying = 0;
+		var lastPaused = 0;
+		var lastFile = "None";
+		var lastState = "None";
+		var lastTrack;
 		
-		// Every time we get a successful response from the server, update the display.
+		// Main logic
 		function updateBoard() {
-			// Flag gets set if metadata has changed, e.g. board needs to fade in
-			// (Only applicable if fadeFlag == true)
-			fadeIn = 0;
-			
-			// If nothing is playing, clear the track info fields
-			if (npObj.nowplaying.playing == 0) {
-				npObj.nowplaying.artist = "&nbsp;";
-				npObj.nowplaying.albumartist = "&nbsp;";
-				npObj.nowplaying.album = "&nbsp;";
-				npObj.nowplaying.title = "Nothing playing";
+			var np = npObj.nowplaying;
+			var state = "";
+		
+			// Identify our current state or transition
+			if (np.playing == 1 && (np.paused == 1 && lastPaused == 0)) {
+				state = "playing->paused";
+			} else if (np.playing == 1 && (np.paused == 0 && lastPaused == 1)) {
+				state = "paused->playing";
+			} else if (np.playing == 1 && (np.paused == 1 && lastPaused == 1)) {
+				state = "paused";
+			} else if (np.playing == 1 && lastPlaying == 0) {
+				state = "stopped->playing";
+			} else if (np.playing == 0 && lastPlaying == 1) {
+				state = "playing->stopped";
+			} else if (np.playing == 0 && lastPlaying == 0) {
+				state = "stopped";
+			} else if (np.playing == 1 && lastPlaying == 1) {
+				state = "playing";
 			}
 			
-			// Build artist string.
+			if (state != lastState) {
+				console.log(lastState, state);
+				lastState = state;
+			}
+			
+			// Handle different states
+			if (np.path != lastFile) {
+				// Changing tracks
+				console.log("Changing tracks");
+					
+				// Add last track to recently-played list.
+				if (lastTrack && lastTrack.playing == 1) {
+					var track = { ...lastTrack }; // Clone the last track data
+					if (track.artist != "?" || track.albumartist != "?")
+					{
+						if (track.artist != track.albumartist) {
+							track.artist += "(" + track.albumartist + ")";
+						}
+					} else {
+						track.artist = "Unknown Artist";
+					}
+				
+					lastTracks.push([track.title, track.artist].join(" - "));
+					// Show the recently-played list if enabled
+					if (lastPlayed > 0) {
+						$("#log").text(lastTracks.slice(0 - lastPlayed).toReversed().join("\n"));
+					}
+				}
+				
+				// Clone the track info for next loop
+				lastTrack = { ...np };
+				
+				UpdateAndShowBoard(np);
+			}
+			
+			if (state == "playing") {
+				// Calculate the current playback position
+				var elMins = Math.floor(npObj.nowplaying.elapsed / 60);
+				var elSecs = npObj.nowplaying.elapsed - elMins * 60;
+				
+				if (elSecs < 10) {
+					elSecs = "0" + elSecs;
+				}
+				
+				var leMins = Math.floor(npObj.nowplaying.length / 60);
+				var leSecs = npObj.nowplaying.length - leMins * 60;
+				
+				if (leSecs < 10) {
+					leSecs = "0" + leSecs;
+				}
+				// Put the elapsed time on the board
+				$('#elapsed').html("<span class=\"elapsedtime\">"+ elMins + ":" + elSecs + "</span>/" + leMins + ":" + leSecs);
+				
+				// Update the width of the progress bar.
+				var progressWidth = Math.ceil(progressLength * (npObj.nowplaying.elapsed / npObj.nowplaying.length));
+				$('#progress').css("width",progressWidth);
+			} else {
+				switch(state) {
+					case "playing->paused":
+					case "stopped->paused":
+						// Fade the icon out, change it, and fade it back in
+						TweenMax.to($('#playpaused'), 0.5, {opacity: 0,onComplete: function(){
+								$('#playpaused').html("&#9208;"); // Pause emoji
+							}});
+						TweenMax.to($('#playpaused'), 0.5, {opacity: 1, delay:0.5});
+						
+						UpdateAndShowBoard(np); // Make the board fade in
+						break;
+					case "playing->stopped":
+					case "paused->stopped":
+						// Fade the icon out, change it, and fade it back in
+						TweenMax.to($('#playpaused'), 0.5, {opacity: 0,onComplete: function(){
+								$('#playpaused').html("&#9209;"); // Stop emoji
+							}});
+						TweenMax.to($('#playpaused'), 0.5, {opacity: 1, delay:0.5});
+						
+						UpdateAndShowBoard(np); // Make the board fade in
+						break;
+					case "paused->playing":
+					case "stopped->playing":
+						// Fade the icon out, change it, and fade it back in
+						TweenMax.to($('#playpaused'), 0.5, {opacity: 0,onComplete: function(){
+								$('#playpaused').html("&#9654;"); // Play emoji
+							}});
+						TweenMax.to($('#playpaused'), 0.5, {opacity: 1, delay:0.5});
+						
+						UpdateAndShowBoard(np); // Make the board fade in
+						break;
+				}
+			}
+			
+			// Check if board needs to fade out
+			if (fadeStatus > 0 && fadeFlag) {
+				fadeStatus--;
+			} else if (fadeStatus == 0 && fadeFlag) {
+				TweenMax.killTweensOf($('#board'));
+				TweenMax.to($('#board'), 1, {opacity: 0});
+				fadeStatus = -1;
+			}
+			
+			// Update progressbar width in case it's changed due to album art loading weirdness or something.
+			progressLength = $("#progresswrapper").width();
+			
+			// Store values for reference next loop
+			lastPlaying = np.playing;
+			lastPaused = np.paused;
+			lastFile = np.path;
+		}
+		
+		// Update metadata fields on screen
+		function UpdateFields(ptrack) {
+			var track = { ...ptrack }; // Clone the passed data
+			
 			// If album artist and artist fields aren't the same, then
 			// display the album artist in parentheses after the artist.
 			// Also, if the artist is blank, we'll put in nothing instead of a ?.
-			var artiststring = "&nbsp;";
-			if (npObj.nowplaying.artist != "?" || npObj.nowplaying.albumartist != "?")
+			if (track.artist != "?" || track.albumartist != "?")
 			{
-				artiststring = npObj.nowplaying.artist;
-				if (npObj.nowplaying.artist != npObj.nowplaying.albumartist) {
-					 artiststring += " <span>(" + npObj.nowplaying.albumartist + ")</span>";
+				if (track.artist != track.albumartist) {
+					track.artist += "(" + track.albumartist + ")";
 				}
 			} else {
-				// If the user has requested we use the folder name when the artist isn't
-				// available, then do so
+				// If the user has requested we use the folder or file name when the artist isn't
+				// available, then do so, otherwise blank the field
 				if (useFolderName == true) {
-					artiststring = npObj.nowplaying.path.split("\\").slice(-1)[0];
+					track.artist = track.path.split("\\").slice(-2)[0];
+				} else if (useFileName == true) {
+					track.artist = track.path.split("\\").slice(-1)[0];
+				} else {
+					track.artist = "&nbsp;";
 				}
 			}
 			
-			// Assemble metadata for fields
-			fieldData = {
-				"#title" : npObj.nowplaying.title == "?" ? "&nbsp;" : npObj.nowplaying.title,
-				"#artist" : artiststring,
-				"#album" : npObj.nowplaying.album == "?" ? "&nbsp;" : npObj.nowplaying.album,
+			// If album name is ?, make it empty.
+			if (track.album == "?") track.album = "&nbsp;";
+			
+			// Of course, if we aren't playing, then just blank everything
+			if (track.playing == 0) {
+				track.title = "Nothing playing",
+				track.artist = "&nbsp;",
+				track.album = "&nbsp;"
+			}
+			
+			fields = {
+				"title" : track.title,
+				"artist" : track.artist,
+				"album" : track.album
 			}
 			
 			// Update fields in board with track info
-			for (const [field, value] of Object.entries(fieldData)) {
+			for (const [field, value] of Object.entries(fields)) {
 				// If the string is different than the existing one, update it.
-				if (lastFieldData[field] != fieldData[field]) {
-					fadeIn = 1; // Make the board fade in.
-					
+				if ($('#' + field).html() != value) {
 					// Fade out the field name
-					TweenMax.to($(field), 0.5, {opacity: 0,onComplete: function(){
+					TweenMax.to($('#' + field), 0.5, {opacity: 0,onComplete: function(){
 						// Replace its contents with the new data
-						$(field).html(value);
+						$('#' + field).html(value);
 						// Scroll the field all the way to the left
-						TweenMax.to($(field), 0, {scrollTo:{x:0}});
+						TweenMax.to($('#' + field), 0, {scrollTo:{x:0}});
 						// Tell it to continuously scroll back and forth if it doesn't fit on the screen
-						TweenMax.to($(field), 4, {scrollTo:{x:"max"},ease:Linear.easeNone,repeat: -1, repeatDelay:1,yoyo:true});
+						TweenMax.to($('#' + field), 4, {scrollTo:{x:"max"},ease:Linear.easeNone,repeat: -1, repeatDelay:1,yoyo:true});
 					}});
 					// Fade the field back in.
-					TweenMax.to($(field), 0.5, {opacity: 1, delay:0.5});
+					TweenMax.to($('#' + field), 0.5, {opacity: 1, delay:0.5});
 				}
 			};
 			
-			// Determine what the play/pause icon should look like,
-			// then call the routine to fade from one to the other.
-			if (playState == 1 && npObj.nowplaying.paused == 1 && npObj.nowplaying.playing == 1) {
-				playState = 0;
-				playChange();
-				fadeIn = 1;
-			} else if (playState == 1 && npObj.nowplaying.playing == 0) {
-				playState = 0;
-				playChange();
-			} else if (playState == 0 && npObj.nowplaying.paused == 0 && npObj.nowplaying.playing == 1) {
-				playState = 1;
-				playChange();
-				fadeIn = 1;
-			}
-			
-			// Calculate the size of the progress bar, based on the elapsed time vs. total time.
-			var elMins = Math.floor(npObj.nowplaying.elapsed / 60);
-			var elSecs = npObj.nowplaying.elapsed - elMins * 60;
-			
-			if (elSecs < 10) {
-				elSecs = "0" + elSecs;
-			}
-			
-			var leMins = Math.floor(npObj.nowplaying.length / 60);
-			var leSecs = npObj.nowplaying.length - leMins * 60;
-			
-			if (leSecs < 10) {
-				leSecs = "0" + leSecs;
-			}
-			
-			// Put the elapsed time on the board
-			$('#elapsed').html("<span class=\"elapsedtime\">"+ elMins + ":" + elSecs + "</span>/" + leMins + ":" + leSecs);
-			// Update the width of the progress bar.
-			var progressWidth = Math.ceil(progressLength * (npObj.nowplaying.elapsed / npObj.nowplaying.length));
-			$('#progress').css("width",progressWidth);
-			
-			// If metadata has changed, make the board materialize.
-			// Also, force a reload of the album art.
-			if (fadeIn == 1) {
-				TweenMax.killTweensOf($('#board'));
-				TweenMax.to($('#board'), 1, {opacity: 1});
-				fadeStatus = fadeTimeout;
+			// If nothing is playing, sub in the no-art image.
+			if (track.playing == 0) {
+				$('#artimg').attr("src", "noart.jpg");
+				$('#artfield').css("background-image", 'url("/noart.jpg")');
+			} else {
+				// Otherwise, force a reload of the album art.
+				// The .5-second delay accounts for delays updating the file on the server side.
+				// Appending the date is necessary so the browser knows it's a new file.
 				
-				// If nothing is playing, sub in the no-art image.
-				if (npObj.nowplaying.playing == 0) {
-					$('#artimg').attr("src", "noart.jpg");
-				} else {
-					// Otherwise, force a reload of the album art.
-					// The .5-second delay accounts for delays updating the file on the server side.
-					// Appending the date is necessary so the browser knows it's a new file.
-					window.setTimeout(function() { $('#artimg').attr("src", "albumart.jpg?" + +Date.now()); }, 500);
-				}
+				$('#artimg').attr("src", "albumart.jpg?" + Date.now());
+				$('#artfield').css("background-image", 'url("/albumart.jpg?' + Date.now() + '")');
 			}
-			
-			/*
-			if (lastFieldData["#title"] != fieldData["#title"] &&
-			       (npObj.nowplaying.playing == 1 || fieldData["#title"] == "Nothing playing")
-				)
-			{
-				
-				lastTracks.push(
-					[ lastFieldData["#title"],
-					  lastFieldData["#artist"],
-					  lastFieldData["#album"] ]
-				);
-				
-				// Update the recently-played field
-				var lastTracksString = "";
-				lastTracks.toReversed().slice(-5).forEach((track) => {
-					lastTracksString += track + "\n";
-				});
-				$("#log").text(lastTracksString);
-			}*/
-			
-			// Update the metadata for next loop
-			lastFieldData = fieldData;
 		}
 		
-		// Update the play/pause icon.
-		function playChange() {
-			var playImg;
-			
-			if (playState == 1) {
-				playImg = "&#9654;"; // Play emoji
-			} else {
-				playImg = "&#9208;"; // Pause emoji
-			}
-			
-			// Fade the icon out, change it, and fade it back in
-			TweenMax.to($('#playpaused'), 0.5, {opacity: 0,onComplete: function(){
-					$('#playpaused').html(playImg);
+		// If the board needs to be shown, do so, then update the fields once it appears
+		// Otherwise, update them immediately.
+		function UpdateAndShowBoard(np) {
+			if (fadeFlag == true) {
+				TweenMax.killTweensOf($('#board'));
+				TweenMax.to($('#board'), 1, {opacity: 1, onComplete: function(){
+					// Update track display
+					UpdateFields(np);
 				}});
-			TweenMax.to($('#playpaused'), 0.5, {opacity: 1, delay:0.5});
-		
+				fadeStatus = fadeTimeout;
+			} else {
+				UpdateFields(np);
+			}
 		}
 	</script>
 </head>
 <body onLoad="init()">
 	<div id="board">
-		<div id="art" class="hidden">
-			<img id="artimg" src="albumart.jpg">
-		</div>
 		<div id="metadata">
-			<div id="title">Nothing playing</div>
-			<div id="artist">&nbsp;</div>
-			<div id="album">&nbsp;</div>
-			<div id="progressbar">
-				<div id="elapsed"><span style="opacity:0.6;">0:00</span>/0:00</div>
-				<div id="playpaused">&#9208;</div>
-				<div id="progresswrapper"><div id="progress"></div></div>
+			<div id="meta-text">
+				<div id="title">Nothing playing</div>
+				<div id="artist">&nbsp;</div>
+				<div id="album">&nbsp;</div>
+			</div>
+			<div id="meta-art" class="hidden">
+				<img id="artimg" src="noart.jpg">
 			</div>
 		</div>
-		<div id="history">
+		<div id="progressbar">
+			<div id="elapsed"><span style="opacity:0.6;">0:00</span>/0:00</div>
+			<div id="playpaused">&#9209;</div>
+			<div id="progresswrapper"><div id="progress"></div></div>
+		</div>
+		<div id="history" class="hidden">
 			<div class="header">Recently played:</div>
 			<div id="log"></div>
 		</div>

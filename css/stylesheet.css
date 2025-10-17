@@ -20,33 +20,44 @@ body {
 }
 
 #board {
-	min-width: 500px;
 	display: flex;
-	width: fit-content;
+	width: 500px;
+	flex-direction: column;
 	min-height: 200px;
 	background: #303030;
 	background: radial-gradient(ellipse 80% 200%,rgb(81, 98, 132) 0%, rgb(31, 66, 104) 74%, rgb(15, 15, 15) 100%);
-	opacity: 1;
+	opacity: 0;
 	padding: 1em;
 	text-shadow: 1px 1px 2px black;
 	border: 2px solid black;
 	box-shadow: 1px 1px 6px 3px black;
-	flex-wrap: wrap;
+}
+
+#metadata {
+	display: flex;
+}
+
+#metadata div {
+	min-width: 0;
 }
 
 .hidden {
 	display: none;
 }
 
-#art {
-	flex: 0;
-	padding-right: 1em;
+#meta-text {
+	flex: 1;
+}
+
+#meta-art {
+	padding-left: 1em;
 }
 
 #artimg {
-	width: 128px;
+	max-height: 128px;
 	box-shadow: 1px 1px 6px 2px rgba(0,0,0,.75);
-	border: 1px solid grey;
+	border: 1px solid grey;	
+	transition: all 1s;
 }
 
 #metadata {
@@ -87,6 +98,12 @@ body {
 	overflow:hidden;
 }
 
+#progressbar {
+	width: 85%;
+	width: -webkit-fill-available;
+	width: -moz-available;
+}
+
 #progresswrapper {
 	height: 32px;
 	border: 1px solid black;
@@ -110,6 +127,7 @@ body {
 	font-family: "oslight";
 }
 #log {
-	font-size: 18pt;
+	font-size: 12pt;
 	white-space: pre;
+	overflow:hidden;
 }
