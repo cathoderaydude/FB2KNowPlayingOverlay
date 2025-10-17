@@ -35,6 +35,8 @@
 		var fadeStatus = 0; // Timer for fadeout
 		var progressLength; // Calculated width of progress bar
 		
+		var lastTracks = []; // Log of recently played tracks
+		
 		// Get everything going
 		function init() {
 			xhr.overrideMimeType('application/json');
@@ -128,16 +130,15 @@
 			
 			// Assemble metadata for fields
 			fieldData = {
+				"#title" : npObj.nowplaying.title == "?" ? "&nbsp;" : npObj.nowplaying.title,
 				"#artist" : artiststring,
 				"#album" : npObj.nowplaying.album == "?" ? "&nbsp;" : npObj.nowplaying.album,
-				"#title" : npObj.nowplaying.title == "?" ? "&nbsp;" : npObj.nowplaying.title
 			}
 			
 			// Update fields in board with track info
 			for (const [field, value] of Object.entries(fieldData)) {
 				// If the string is different than the existing one, update it.
 				if (lastFieldData[field] != fieldData[field]) {
-					console.log(lastFieldData[field], fieldData[field]);
 					fadeIn = 1; // Make the board fade in.
 					
 					// Fade out the field name
@@ -153,8 +154,6 @@
 					TweenMax.to($(field), 0.5, {opacity: 1, delay:0.5});
 				}
 			};
-			// Update the metadata for next loop
-			lastFieldData = fieldData;
 			
 			// Determine what the play/pause icon should look like,
 			// then call the routine to fade from one to the other.
@@ -209,6 +208,29 @@
 					window.setTimeout(function() { $('#artimg').attr("src", "albumart.jpg?" + +Date.now()); }, 500);
 				}
 			}
+			
+			/*
+			if (lastFieldData["#title"] != fieldData["#title"] &&
+			       (npObj.nowplaying.playing == 1 || fieldData["#title"] == "Nothing playing")
+				)
+			{
+				
+				lastTracks.push(
+					[ lastFieldData["#title"],
+					  lastFieldData["#artist"],
+					  lastFieldData["#album"] ]
+				);
+				
+				// Update the recently-played field
+				var lastTracksString = "";
+				lastTracks.toReversed().slice(-5).forEach((track) => {
+					lastTracksString += track + "\n";
+				});
+				$("#log").text(lastTracksString);
+			}*/
+			
+			// Update the metadata for next loop
+			lastFieldData = fieldData;
 		}
 		
 		// Update the play/pause icon.
@@ -244,6 +266,10 @@
 				<div id="playpaused">&#9208;</div>
 				<div id="progresswrapper"><div id="progress"></div></div>
 			</div>
+		</div>
+		<div id="history">
+			<div class="header">Recently played:</div>
+			<div id="log"></div>
 		</div>
 	</div>
 </body>
