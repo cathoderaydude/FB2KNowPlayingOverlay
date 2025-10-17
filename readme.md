@@ -14,6 +14,8 @@ This is a moderately-janky solution for getting a Now Playing overlay to appear 
 * Displays the track length / elapsed time live
 * Displays a live "scrub bar" showing the position in the track
 * Displays album art
+  * Will extract album art from files if present
+  * Otherwise looks for art in same folder as track
 
 ## Cons:
 
@@ -74,23 +76,29 @@ The result should look like [this](doc-images/np2-step1.png).
 
 ### Enabling album art
 
-For album art to work:
+Album art is located in two ways:
 
-* The art must exist in the same folder as the track you're playing
-* The filename must be:
+* **Extracted from the song itself.** To make this work:
+  * Open a command prompt
+  * Type `pip install TinyTag`
+  * Type `pip install Pillow`
+  * You're done, the feature is automatic.
+* **Found in a file next to the song itself.** For this to work:
+* The art must be in the same folder as the song, with one of these names:
 	* **front.jpg**
  	* **cover.jpg**
     * **folder.jpg**
     * **[the name of the folder].jpg**
-    * If multiple of these files exist, they'll be used in the above order.
+  * If multiple of these files exist, they'll be used in the above priority order.
+* If _no_ album art is found, a generic image will appear.
 
-If none of those files are found, a generic image will be substituted.
+To set up album art retrieval:
 
 1. Open the **Now Playing 2** config in foobar again.
 2. Go to the **Log** tab
 3. Pick a nonsense filename somewhere, it doesn't matter where.
 	- This file is not used for anything, it just enables this feature.
-5. In the **Format** field, enter: `$directory_path(%path%)` [like this](doc-images/np2-step2.png).
+5. In the **Format** field, enter: `%path%` [like this](doc-images/np2-step2.png).
 6. Go to the **Run** tab
 7. Ensure **On New Track** is selected.
 8. In the **Launch** field, enter: `C:\Code\FB2KNowPlayingOverlay\albumart.bat "$np2_log"` [like this](doc-images/np2-step3.png).
@@ -124,7 +132,7 @@ First, let's start the server and make sure it works.
 
 There are several built-in adjustments you can make by modifying the URL in the Browser Source. This allows you to put different versions of the overlay in different scenes. To enable each one, add it to the URL in the browser source in standard HTTP notation, like this:
 
-`http://localhost:8005/nowplaying.html?art=true&fade=true&width=500`
+`http://localhost:8005/nowplaying.html?noart=true&fade=true&width=500`
 
 **Album art display:** This is **on** by default. Add `noart=true` to disable it.
 
