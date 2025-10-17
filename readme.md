@@ -20,13 +20,11 @@ This is a moderately-janky solution for getting a Now Playing overlay to appear 
 ## Cons:
 
 * Only works with foobar2000, which is (imo) becoming moribund.
-  * For the above reason, it only works on Windows
 * Requires a fb2k plugin which may evaporate at any moment, as several others have
+	* For the above reasons, it only works on Windows
 * Fiddly setup.
 
-Despite these problems, I could not find any better solution. Local media players are virtually a dead product; the only real alternative with any uptake was VLC, and suffice to say, I could not find a way to make it work.
-
-This, however, _does_ work, and once you set it up I think it will just keep working, even if you have to keep an old copy of foobar around forever. That may even be the best way to do it.
+Despite these problems, I could not find any better solution. Local media players are virtually a dead product; the only real alternative with any uptake is VLC, which I do not like, and the leading overlay for use with it is Tuna, which doesn't really fit my visual / layout needs and desires. So I built my own thing; maybe it'll also work for you.
 
 # Installation
 
@@ -36,9 +34,14 @@ This, however, _does_ work, and once you set it up I think it will just keep wor
 	* We will assume you used `C:\Code\FB2KNowPlayingOverlay`
 	* If you put it somewhere else, remember to change this in later steps!
 5. Install the foobar2000 plugin [Now Playing 2](https://github.com/foxx1337/foo_nowplaying2)
-6. Make sure you have Python installed. The latest version of python3 should be fine.
+6. Install Python
 	* I recommend running the installer as Administrator and telling it to install systemwide rather than for just your user.
  	* If you have problems launching the server or getting the album art to work, this might be why.
+7. Open a command prompt
+8. Type `pip install TinyTag`
+9. Type `pip install Pillow`
+
+All the components are now installed.
 
 ## Configuring foobar
 
@@ -62,7 +65,7 @@ This, however, _does_ work, and once you set it up I think it will just keep wor
 		"tracknumber": $add($replace(%track number%,'?','0'),0),
 		"length": $replace(%length_seconds%,'?','0'),
 		"elapsed": $replace(%playback_time_seconds%,'?','0'),
-		"path": "$replace($directory_path(%path%),'"','\"','\','\\')"
+		"path": "$replace(%path%,'"','\"','\','\\')"
 	}
 }
 ```
@@ -76,38 +79,22 @@ The result should look like [this](doc-images/np2-step1.png).
 
 ### Enabling album art
 
-Album art is located in two ways:
-
-* **Extracted from the song itself.** To make this work:
-  * Open a command prompt
-  * Type `pip install TinyTag`
-  * Type `pip install Pillow`
-  * You're done, the feature is automatic.
-* **Found in a file next to the song itself.** For this to work:
-* The art must be in the same folder as the song, with one of these names:
-	* **front.jpg**
- 	* **cover.jpg**
-    * **folder.jpg**
-    * **[the name of the folder].jpg**
-  * If multiple of these files exist, they'll be used in the above priority order.
-* If _no_ album art is found, a generic image will appear.
-
-To set up album art retrieval:
+If you don't want album art, ever, you can skip this section, just remember to disable it in the customization section.
 
 1. Open the **Now Playing 2** config in foobar again.
 2. Go to the **Log** tab
-3. Pick a nonsense filename somewhere, it doesn't matter where.
+3. Select a nonsense filename somewhere, it doesn't matter where.
 	- This file is not used for anything, it just enables this feature.
 5. In the **Format** field, enter: `%path%` [like this](doc-images/np2-step2.png).
 6. Go to the **Run** tab
-7. Ensure **On New Track** is selected.
+7. Ensure **On New Track** is checked.
 8. In the **Launch** field, enter: `C:\Code\FB2KNowPlayingOverlay\albumart.bat "$np2_log"` [like this](doc-images/np2-step3.png).
 	* As usual, change the folder name if you didn't extract to that exact location.
 8. Click OK
 9. Play a new song (one which you know has album art!)
 10. Look in the project folder and see if an "albumart.jpg" has appeared.
 	* If there's no such file _at all_, then the script failed to execute. Check the path you entered in the Launch command.
-	* If the file is there, but it's a generic CD icon, then the source file was not found; check that the album art is present in the original folder.
+	* If the file is there, but it's a generic CD icon, then the source file was not found; see "Troubleshooting."
 	* If the file is there and has the correct artwork, you're set to jet.
 
 ## Setting up the overlay
@@ -136,16 +123,40 @@ There are several built-in adjustments you can make by modifying the URL in the 
 
 **Album art display:** This is **on** by default. Add `noart=true` to disable it.
 
-**Fade out:** This is **off** by default, so the UI will **not** fade out. Add `fade=true` to enable fading.
+**Fade out:** This is **off** by default, so the UI will **always** be visible. Add `fade=true` to make it fade out after each track change.
 
 **Fade out delay:** This is 10 seconds by default. Add `fadetime=20` to change it to i.e. 20 seconds.
 
-**Display width:** The UI is about 350 pixels wide by default. Add `width=500` to make it i.e. 500 pixels.
+**Display width:** The UI is about 500 pixels wide by default. Add i.e. `width=700` to make it 700 pixels.
 
-**Folder name as artist:** If you play a song with no artist tag, by default it'll just show up empty. If you set `foldername=true`, the artist field will show the name of the folder the file is in. Be careful if you sometimes store your music in _"C:\FilthyImagesDontLookInHere"_.
+**Folder name as artist:** If you play a song with no artist tag, the artist field will be blank. If you set `foldername=true` however, the artist field will show the name of the folder the file is in. Be careful if you sometimes store your music in _"C:\FilthyImagesDontLookInHere"_.
+
+**Filename as artist:** As above, except the artist field will show the name of the file itself. Set `filename=true` to enable this.
+
+**Recently played list:** Set `lastplayed=5` to display a list of the last 5 songs played. Note that this will make the UI taller, so after you pick a list size, play enough songs to fill up the whole list, then adjust your OBS browser source to fit or it'll get cut off.
+
+# Troubleshooting
+
+## Album art isn't loading / wrong album art is loading
+
+Album art is retrieved in two different ways:
+
+**Extracted from the song file itself:**
+Music from most stores (bandcamp, etc.) has the album art embedded. Assuming you installed TinyTag and Pillow as instructed, this should work automatically. However, some songs don't have it embedded, in which case it has to be...
+
+**Found in a file next to the song itself:**
+For this to work, the art must be in the same folder as the song, with one of these names:
+	* **front.jpg**
+ 	* **cover.jpg**
+    * **folder.jpg**
+    * **[the name of the folder].jpg**
+
+If none of these are found, well, it won't work, naturally. Also, if several of these files exist, they'll be used in the above order, so if you're getting the wrong art, it might be because front.jpg is overriding cover.jpg, in which case the only solution is to delete it.
+
+Also, any art embedded in a file will always override art found in the folder.
 
 # Credits
 
-This is forked from a project by [farpenoodles](https://github.com/farpenoodle/FB2KNowPlayingOverlay) which had not been updated in over a decade and was so code-rotted that it no longer functioned (e.g. it depended on javascript loaded from a local file being able to access files directly on the host filesystem.)
+This is based on a project by [farpenoodles](https://github.com/farpenoodle/FB2KNowPlayingOverlay) which had not been updated in over a decade and was so code-rotted that it no longer functioned (e.g. it depended on javascript loaded from a local file being able to access files directly on the host filesystem.)
 
-I have rewritten a good chunk of it, but I would not have started this project at all without their efforts.
+I have rewritten essentially all of it, but I would not have started this project at all without their efforts.
