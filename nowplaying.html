@@ -6,21 +6,27 @@
 	<script src="js/CSSPlugin.min.js" type="text/javascript" charset="utf-8"></script>
 	<script src="js/ScrollToPlugin.min.js" type="text/javascript" charset="utf-8"></script>
 	<script type="text/javascript">	
+		// =======================================
 		// Collect flags from URL
 		params = new URLSearchParams(document.location.search);
 		// Flags default to false, and become true if you pass them in the URL with any value.
-		// Example: nowplaying.html?artFlag=yep&fadeFlag=sure&fadeTimeout=5
+		// Example: nowplaying.html?noart=yep&fade=sure&fadetime=5
 		// The above will enable art and fadeout, but would do the same thing even if you put "nope" in the value.
-		// Hope that makes sense.
-		var artFlag = params.get("art") != null ? true : false;
+
+		var artFlag = params.get("noart") != null ? false : true;
 		var fadeFlag = params.get("fade") != null ? true : false;
+		
 		var fadeTimeout = params.get("fadetime") != null ?
 			parseInt(params.get("fadetime")) != NaN ? parseInt(params.get("fadetime")) : 10
 			: 10;
+			
 		var maxWidth = params.get("width") != null ? 
 			parseInt(params.get("width")) != NaN ? parseInt(params.get("width")) : 350
 		: 350;
+		
 		var useFolderName = params.get("foldername") != null ? true : false;
+		// ======================================
+		
 		
 		var npObj; // Stores the data retrieved from the server
 		var xhr = new XMLHttpRequest();
@@ -193,10 +199,15 @@
 				TweenMax.to($('#board'), 1, {opacity: 1});
 				fadeStatus = fadeTimeout;
 				
-				// Force a reload of the album art.
-				// The .5-second delay accounts for delays on the server side.
-				// The random date convinces the browser it's a new file.
-				window.setTimeout(function() { $('#artimg').attr("src", "albumart.jpg?" + +Date.now()); }, 500);
+				// If nothing is playing, sub in the no-art image.
+				if (npObj.nowplaying.playing == 0) {
+					$('#artimg').attr("src", "noart.jpg");
+				} else {
+					// Otherwise, force a reload of the album art.
+					// The .5-second delay accounts for delays updating the file on the server side.
+					// Appending the date is necessary so the browser knows it's a new file.
+					window.setTimeout(function() { $('#artimg').attr("src", "albumart.jpg?" + +Date.now()); }, 500);
+				}
 			}
 		}
 		
@@ -205,11 +216,12 @@
 			var playImg;
 			
 			if (playState == 1) {
-				playImg = "&#9654;";
+				playImg = "&#9654;"; // Play emoji
 			} else {
-				playImg = "&#9208;";
+				playImg = "&#9208;"; // Pause emoji
 			}
 			
+			// Fade the icon out, change it, and fade it back in
 			TweenMax.to($('#playpaused'), 0.5, {opacity: 0,onComplete: function(){
 					$('#playpaused').html(playImg);
 				}});
