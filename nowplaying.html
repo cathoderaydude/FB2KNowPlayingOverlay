@@ -20,6 +20,7 @@
 		var maxWidth = params.get("width") != null ? 
 			parseInt(params.get("width")) != NaN ? parseInt(params.get("width")) : 350
 		: 350;
+		var useFolderName = params.get("foldername") != null ? true : false;
 		
 		var npObj; // Stores the data retrieved from the server
 		var xhr = new XMLHttpRequest();
@@ -103,22 +104,34 @@
 			// Build artist string.
 			// If album artist and artist fields aren't the same, then
 			// display the album artist in parentheses after the artist.
-			var artiststring = npObj.nowplaying.artist
-			if (npObj.nowplaying.artist != npObj.nowplaying.albumartist) {
-				 artiststring += " <span>(" + npObj.nowplaying.albumartist + ")</span>";
+			// Also, if the artist is blank, we'll put in nothing instead of a ?.
+			var artiststring = "&nbsp;";
+			if (npObj.nowplaying.artist != "?" || npObj.nowplaying.albumartist != "?")
+			{
+				artiststring = npObj.nowplaying.artist;
+				if (npObj.nowplaying.artist != npObj.nowplaying.albumartist) {
+					 artiststring += " <span>(" + npObj.nowplaying.albumartist + ")</span>";
+				}
+			} else {
+				// If the user has requested we use the folder name when the artist isn't
+				// available, then do so
+				if (useFolderName == true) {
+					artiststring = npObj.nowplaying.path.split("\\").slice(-1)[0];
+				}
 			}
 			
 			// Assemble metadata for fields
 			fieldData = {
 				"#artist" : artiststring,
-				"#album" : npObj.nowplaying.album,
-				"#title" : npObj.nowplaying.title
+				"#album" : npObj.nowplaying.album == "?" ? "&nbsp;" : npObj.nowplaying.album,
+				"#title" : npObj.nowplaying.title == "?" ? "&nbsp;" : npObj.nowplaying.title
 			}
 			
 			// Update fields in board with track info
 			for (const [field, value] of Object.entries(fieldData)) {
 				// If the string is different than the existing one, update it.
 				if (lastFieldData[field] != fieldData[field]) {
+					console.log(lastFieldData[field], fieldData[field]);
 					fadeIn = 1; // Make the board fade in.
 					
 					// Fade out the field name
